@@ -19,13 +19,14 @@
 *
 */
 
+/* jshint jasmine: true */
+
 exports.defineAutoTests = function () {
     var fail = function (done, message) {
         message = (typeof message !== 'string') ? "Forced failure: wrong callback called" : message;
         expect(true).toFailWithMessage(message);
         done();
     },
-        unexpectedSuccess = "Forced failure: success callback should not have been called",
         unexpectedFailure = "Forced failure: error callback should not have been called";
 
     describe('Compass (navigator.compass)', function () {
@@ -133,6 +134,66 @@ exports.defineAutoTests = function () {
                 expect(typeof h.timestamp == 'number').toBe(true);
             });
         });
+
+        describe("Compass watch heading", function() {
+            it("compass.spec.10 watchCurrentHeading called with a Heading object", function (done) {
+                if (!isCompassAvailable) {
+                    pending();
+                }
+
+                var calledOnce = false;
+
+                var watchId = navigator.compass.watchHeading(
+                    function (a){
+                        expect(a instanceof CompassHeading).toBe(true);
+                        expect(a.magneticHeading).toBeDefined();
+                        expect(typeof a.magneticHeading == 'number').toBe(true);
+                        expect(a.trueHeading).not.toBe(undefined);
+                        expect(typeof a.trueHeading == 'number' || a.trueHeading === null).toBe(true);
+                        expect(a.headingAccuracy).not.toBe(undefined);
+                        expect(typeof a.headingAccuracy == 'number' || a.headingAccuracy === null).toBe(true);
+                        expect(typeof a.timestamp == 'number').toBe(true);
+
+                        if (calledOnce) {
+                            navigator.compass.clearWatch(watchId);
+                            done();
+                        }
+
+                        calledOnce = true;
+                    },
+                    function (compassError){},
+                    { frequency: 50 }
+                );
+            });
+
+            it("compass.spec.11 the watch success callback should not be called once the watch is cleared", function (done) {
+                if (!isCompassAvailable) {
+                    pending();
+                }
+
+                var calledOnce = false;
+                var watchCleared = false;
+
+                var watchId = navigator.compass.watchHeading(
+                    function (a){
+                        // Don't invoke this function if we have cleared the watch
+                        expect(watchCleared).toBe(false);
+
+                        if (calledOnce) {
+                            navigator.compass.clearWatch(watchId);
+                            watchCleared = true;
+                            setInterval(function(){
+                                done();
+                            }, 100);
+                        }
+
+                        calledOnce = true;
+                    },
+                    function (compassError){},
+                    { frequency: 50 }
+                );
+            });
+        });
     });
 };
 
@@ -150,19 +211,45 @@ exports.defineManualTests = function (contentEl, createActionButton) {
     var watchCompassId = null;
 
     /**
+     * Set compass status
+     */
+    function setCompassStatus(status) {
+        document.getElementById('compass_status').innerHTML = status;
+    }
+
+    // Success callback for both watchHeading and getCurrentHeading
+    function success(a) {
+        var magneticHeading = document.getElementById('magneticHeading');
+        var trueHeading = document.getElementById("trueHeading");
+        var headingAccuracy = document.getElementById("headingAccuracy");
+        var timestamp = document.getElementById("timestamp");
+
+        magneticHeading.innerHTML = roundNumber(a.magneticHeading);
+        trueHeading.innerHTML = roundNumber(a.trueHeading);
+        headingAccuracy.innerHTML = a.headingAccuracy;
+        timestamp.innerHTML = a.timestamp;
+    }
+
+    /**
+     * Stop watching the acceleration
+     */
+    function stopCompass() {
+        setCompassStatus("Stopped");
+        if (watchCompassId) {
+            navigator.compass.clearWatch(watchCompassId);
+            watchCompassId = null;
+        }
+    }
+
+    /**
      * Start watching compass
      */
     var watchCompass = function () {
         console.log("watchCompass()");
 
-        // Success callback
-        var success = function (a) {
-            document.getElementById('compassHeading').innerHTML = roundNumber(a.magneticHeading);
-        };
-
         // Fail callback
         var fail = function (e) {
-            console.log("watchCompass fail callback with error code " + e);
+            console.log("watchCompass fail callback with error: " + JSON.stringify(e));
             stopCompass();
             setCompassStatus(e);
         };
@@ -179,17 +266,6 @@ exports.defineManualTests = function (contentEl, createActionButton) {
     };
 
     /**
-     * Stop watching the acceleration
-     */
-    var stopCompass = function () {
-        setCompassStatus("Stopped");
-        if (watchCompassId) {
-            navigator.compass.clearWatch(watchCompassId);
-            watchCompassId = null;
-        }
-    };
-
-    /**
      * Get current compass
      */
     var getCompass = function () {
@@ -198,27 +274,15 @@ exports.defineManualTests = function (contentEl, createActionButton) {
         // Stop compass if running
         stopCompass();
 
-        // Success callback
-        var success = function (a) {
-            document.getElementById('compassHeading').innerHTML = roundNumber(a.magneticHeading);
-        };
-
         // Fail callback
         var fail = function (e) {
-            console.log("getCompass fail callback with error code " + e.toString);
+            console.log("getCompass fail callback with error: " + JSON.stringify(e));
             setCompassStatus(e);
         };
 
         // Make call
         var opt = {};
         navigator.compass.getCurrentHeading(success, fail, opt);
-    };
-
-    /**
-     * Set compass status
-     */
-    var setCompassStatus = function (status) {
-        document.getElementById('compass_status').innerHTML = status;
     };
 
     /******************************************************************************/
@@ -233,9 +297,12 @@ exports.defineManualTests = function (contentEl, createActionButton) {
 
     contentEl.innerHTML = '<div id="info"><b>Status: </b>' +
         '<span id="compass_status">Stopped</span>' +
-        '<table width="100%"><tr>' +
-        '<td width="33%">Heading: <span id="compassHeading"></span>' +
-        '</td></tr></table></div>' +
+        '<table width="100%">' +
+        '<tr><td width="33%">Magnetic heading: <span id="magneticHeading"></span></td></tr>' +
+        '<tr><td width="33%">True heading: <span id="trueHeading"></span></td></tr>' +
+        '<tr><td width="33%">Heading accuracy: <span id="headingAccuracy"></span></td></tr>' +
+        '<tr><td width="33%">Timestamp: <span id="timestamp"></span></td></tr>' +
+        '</table></div>' +
         orientation_tests;
 
     createActionButton('Get Compass', function () {

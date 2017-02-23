@@ -20,6 +20,23 @@
 -->
 # Release Notes
 
+### 1.0.5 (Dec 07, 2016)
+* [CB-12224](https://issues.apache.org/jira/browse/CB-12224) Updated version and RELEASENOTES.md for release 1.0.5
+* [CB-9179](https://issues.apache.org/jira/browse/CB-9179) (ios) Fixed trueHeading being always 0
+* [CB-11917](https://issues.apache.org/jira/browse/CB-11917) - Remove pull request template checklist item: "iCLA has been submitted…"
+* [CB-11832](https://issues.apache.org/jira/browse/CB-11832) Incremented plugin version.
+
+### 1.0.4 (Sep 08, 2016)
+* [CB-11795](https://issues.apache.org/jira/browse/CB-11795) Add 'protective' entry to cordovaDependencies
+* Add badges for paramedic builds on Jenkins
+* Add pull request template.
+* [CB-10996](https://issues.apache.org/jira/browse/CB-10996) Adding front matter to README.md
+* Removed ios quirk code + documentation
+
+### 1.0.3 (Apr 15, 2016)
+* Remove `warning` emoji, as it doesn't correctly display in the docs website: http://cordova.apache.org/docs/en/dev/cordova-plugin-device-orientation/index.html
+* [CB-10636](https://issues.apache.org/jira/browse/CB-10636) Add `JSHint` for plugins
+
 ### 1.0.2 (Nov 18, 2015)
 * [CB-10035](https://issues.apache.org/jira/browse/CB-10035) Updated `RELEASENOTES` to be newest to oldest
 * [CB-4596](https://issues.apache.org/jira/browse/CB-4596) Fix `timestamp` to be `DOMTimeStamp` across the board
